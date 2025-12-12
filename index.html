@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Binder Number Lookup</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background: #f7f7f7;
+  }
+
+  h1 {
+    text-align: center;
+  }
+
+  .container {
+    max-width: 500px;
+    margin: auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
+  input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #aaa;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #004aad;
+    color: white;
+    border: none;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #00337a;
+  }
+
+  .result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #eef;
+    border-radius: 8px;
+    font-size: 18px;
+    white-space: pre-line;
+  }
+</style>
+</head>
+<body>
+
+<h1>Binder Number Lookup</h1>
+
+<div class="container">
+  <input id="searchNumber" type="number" placeholder="Enter number…" />
+
+  <button onclick="lookupNumber()">Find Binder</button>
+
+  <div id="result" class="result"></div>
+</div>
+
+<script>
+// -------------------------
+// BINDER DATA
+// -------------------------
+
+const binderRanges = [
+  { binder: 1, start: 78808378174, end: 78808391086 },
+  { binder: 2, start: 43780028254, end: 43780101432 },
+  { binder: 3, start: 78614547418, end: 78808345942 },
+  { binder: 4, start: 34870009320, end: 34870012308 },
+  { binder: 5, start: 11002535505, end: 11002537220 },
+  { binder: 6, start: 11004283211, end: 34870009312 },
+  { binder: 7, start: 43780026432, end: 43780028239 },
+  { binder: 8, start: 43780101440, end: 78614547418 },
+  { binder: 9, start: 11002537238, end: 11004254394 },
+  { binder: 10, start: 34870013413, end: 34872283048 },
+  { binder: 11, start: 34872331086, end: 41370138319 }
+];
+
+// Standalone numbers (Binder 12 & 13)
+const binderSingles = [
+  { binder: 12, number: 26102190142 },
+  { binder: 12, number: 34870009205 },
+  { binder: 13, number: 78808373266 }
+];
+
+// -------------------------
+// LOOKUP FUNCTION
+// -------------------------
+
+function lookupNumber() {
+  const input = document.getElementById("searchNumber").value.trim();
+  const num = Number(input);
+  const resultBox = document.getElementById("result");
+
+  if (!input) {
+    resultBox.textContent = "Please enter a number.";
+    return;
+  }
+
+  let matches = [];
+
+  // Check standalone matches first
+  binderSingles.forEach(entry => {
+    if (entry.number === num) {
+      matches.push(`Binder ${entry.binder} (exact match)`);
+    }
+  });
+
+  // Check ranges second
+  binderRanges.forEach(entry => {
+    if (num >= entry.start && num <= entry.end) {
+      matches.push(`Binder ${entry.binder} (within ${entry.start} - ${entry.end})`);
+    }
+  });
+
+  if (matches.length === 0) {
+    resultBox.textContent = "No binder contains this number.";
+  } else {
+    resultBox.textContent = "Result:\n" + matches.join("\n");
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,137 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Binder Number Lookup</title>
+<meta charset="UTF-8">
+<title>Retain Converter</title>
+
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 40px;
-    background: #f7f7f7;
-  }
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    max-width:1000px;
+    margin:40px auto;
+    padding:20px;
+}
 
-  h1 {
-    text-align: center;
-  }
+h2{
+    margin-bottom:10px;
+}
 
-  .container {
-    max-width: 500px;
-    margin: auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  }
+textarea{
+    width:100%;
+    height:220px;
+    font-family:Consolas,monospace;
+    font-size:14px;
+    padding:10px;
+    box-sizing:border-box;
+    resize:vertical;
+}
 
-  input {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border: 1px solid #aaa;
-  }
+button{
+    padding:10px 20px;
+    margin:15px 5px 15px 0;
+    cursor:pointer;
+    font-size:15px;
+}
 
-  button {
-    width: 100%;
-    padding: 12px;
-    background: #004aad;
-    color: white;
-    border: none;
-    font-size: 16px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
+#status{
+    margin-bottom:15px;
+    font-weight:bold;
+}
 
-  button:hover {
-    background: #00337a;
-  }
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
 
-  .result {
-    margin-top: 20px;
-    padding: 15px;
-    background: #eef;
-    border-radius: 8px;
-    font-size: 18px;
-    white-space: pre-line;
-  }
+th,td{
+    border:1px solid #ccc;
+    padding:6px;
+    text-align:left;
+    font-size:14px;
+}
+
+th{
+    background:#f0f0f0;
+}
 </style>
+
 </head>
 <body>
 
-<h1>Binder Number Lookup</h1>
+<h2>Retain Converter</h2>
 
-<div class="container">
-  <input id="searchNumber" type="number" placeholder="Enter number…" />
+<textarea id="input" placeholder="Paste copied data here..."></textarea>
 
-  <button onclick="lookupNumber()">Find Binder</button>
+<br>
 
-  <div id="result" class="result"></div>
-</div>
+<button onclick="convert()">Convert to Retain</button>
+<button onclick="copyOutput()">Copy Output</button>
+<button onclick="clearAll()">Clear</button>
+
+<div id="status"></div>
+
+<table id="outputTable">
+<thead>
+<tr>
+<th>Product ID</th>
+<th>SAP</th>
+<th>Lot#</th>
+<th>Expiration Date</th>
+<th>Retain Date</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 
 <script>
-// -------------------------
-// BINDER DATA
-// -------------------------
 
-const binderRanges = [
-  { binder: 1, start: 78808378174, end: 78808391086 },
-  { binder: 2, start: 43780028254, end: 43780101432 },
-  { binder: 3, start: 78614547418, end: 78808345942 },
-  { binder: 4, start: 34870009320, end: 34870012308 },
-  { binder: 5, start: 11002535505, end: 11002537220 },
-  { binder: 6, start: 11004283211, end: 34870009312 },
-  { binder: 7, start: 43780026432, end: 43780028239 },
-  { binder: 8, start: 43780101440, end: 78614547418 },
-  { binder: 9, start: 11002537238, end: 11004254394 },
-  { binder: 10, start: 34870013413, end: 34872283048 },
-  { binder: 11, start: 34872331086, end: 41370138319 }
-];
+const COL_PRODUCT = 0;
+const COL_SAP = 2;
+const COL_LOT = 3;
+const COL_EXP = 4;
 
-// Standalone numbers (Binder 12 & 13)
-const binderSingles = [
-  { binder: 12, number: 26102190142 },
-  { binder: 12, number: 34870009205 },
-  { binder: 13, number: 78808373266 }
-];
+let outputText = "";
 
-// -------------------------
-// LOOKUP FUNCTION
-// -------------------------
+function addSixMonths(dateString) {
 
-function lookupNumber() {
-  const input = document.getElementById("searchNumber").value.trim();
-  const num = Number(input);
-  const resultBox = document.getElementById("result");
+    const parts = dateString.split("-");
 
-  if (!input) {
-    resultBox.textContent = "Please enter a number.";
-    return;
-  }
+    if (parts.length !== 3) return "";
 
-  let matches = [];
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
 
-  // Check standalone matches first
-  binderSingles.forEach(entry => {
-    if (entry.number === num) {
-      matches.push(`Binder ${entry.binder} (exact match)`);
-    }
-  });
+    const targetMonth = month + 6;
 
-  // Check ranges second
-  binderRanges.forEach(entry => {
-    if (num >= entry.start && num <= entry.end) {
-      matches.push(`Binder ${entry.binder} (within ${entry.start} - ${entry.end})`);
-    }
-  });
+    const targetYear = year + Math.floor((targetMonth - 1) / 12);
+    const finalMonth = ((targetMonth - 1) % 12) + 1;
 
-  if (matches.length === 0) {
-    resultBox.textContent = "No binder contains this number.";
-  } else {
-    resultBox.textContent = "Result:\n" + matches.join("\n");
-  }
+    // Find the last day of the destination month
+    const lastDay = new Date(targetYear, finalMonth, 0).getDate();
+
+    // Clamp the original day to the last day of the destination month
+    const finalDay = Math.min(day, lastDay);
+
+    return `${targetYear}-${String(finalMonth).padStart(2,"0")}-${String(finalDay).padStart(2,"0")}`;
 }
+
+function convert() {
+
+    const input = document.getElementById("input").value.trim();
+    const tbody = document.querySelector("#outputTable tbody");
+
+    tbody.innerHTML = "";
+    outputText = "";
+
+    if (input === "") {
+        document.getElementById("status").textContent = "Nothing to convert.";
+        return;
+    }
+
+    const rows = input.split(/\r?\n/);
+
+    let converted = 0;
+    let skipped = 0;
+
+    rows.forEach(row => {
+
+        if (row.trim() === "") return;
+
+        const cols = row.split("\t");
+
+        // Expecting 9 columns
+        if (cols.length < 9) {
+            skipped++;
+            return;
+        }
+
+        const product = cols[COL_PRODUCT];
+        const sap = cols[COL_SAP];
+        const lot = cols[COL_LOT];
+        const exp = cols[COL_EXP];
+        const retain = addSixMonths(exp);
+
+        const tr = document.createElement("tr");
+
+        [product, sap, lot, exp, retain].forEach(value => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+
+        outputText +=
+`${product}\t${sap}\t${lot}\t${exp}\t${retain}\n`;
+
+        converted++;
+
+    });
+
+    document.getElementById("status").textContent =
+        `Converted ${converted} row(s)` +
+        (skipped ? ` | Skipped ${skipped} malformed row(s)` : "");
+
+}
+
+function copyOutput() {
+
+    if (outputText === "") {
+        alert("Nothing to copy.");
+        return;
+    }
+
+    navigator.clipboard.writeText(outputText)
+        .then(() => alert("Output copied to clipboard."))
+        .catch(() => alert("Unable to copy output."));
+
+}
+
+function clearAll() {
+
+    document.getElementById("input").value = "";
+    document.querySelector("#outputTable tbody").innerHTML = "";
+    document.getElementById("status").textContent = "";
+    outputText = "";
+
+}
+
 </script>
 
 </body>

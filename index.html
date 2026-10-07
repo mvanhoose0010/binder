@@ -1,204 +1,342 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Retain Converter</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retain Order Converter</title>
 <style>
-body{
-    font-family:Arial,Helvetica,sans-serif;
-    max-width:1000px;
-    margin:40px auto;
-    padding:20px;
-}
-
-h2{
-    margin-bottom:10px;
-}
-
-textarea{
-    width:100%;
-    height:220px;
-    font-family:Consolas,monospace;
-    font-size:14px;
-    padding:10px;
-    box-sizing:border-box;
-    resize:vertical;
-}
-
-button{
-    padding:10px 20px;
-    margin:15px 5px 15px 0;
-    cursor:pointer;
-    font-size:15px;
-}
-
-#status{
-    margin-bottom:15px;
-    font-weight:bold;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:15px;
-}
-
-th,td{
-    border:1px solid #ccc;
-    padding:6px;
-    text-align:left;
-    font-size:14px;
-}
-
-th{
-    background:#f0f0f0;
-}
+  :root {
+    --bg: #f3f5f4;
+    --panel: #ffffff;
+    --ink: #1c2b2a;
+    --muted: #5e6f6d;
+    --line: #d5dedc;
+    --accent: #0f6b62;
+    --accent-ink: #ffffff;
+    --warn-bg: #fdecea;
+    --warn: #a62a1e;
+    --ok-bg: #e6f3f1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121a19;
+      --panel: #1a2524;
+      --ink: #e4eeec;
+      --muted: #93a8a5;
+      --line: #2e3f3d;
+      --accent: #3fb8aa;
+      --accent-ink: #08201d;
+      --warn-bg: #3a1e1b;
+      --warn: #ff9a8d;
+      --ok-bg: #1b3431;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 70ch; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .panel h2 { font-size: 16px; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  textarea {
+    width: 100%;
+    min-height: 150px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    white-space: pre;
+  }
+  textarea:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+  button, .filebtn {
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover, .filebtn:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .filebtn input { display: none; }
+  .spacer { flex: 1; }
+  label.opt { font-size: 14px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  label.opt input[type=number] {
+    width: 58px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--ink); font: inherit;
+  }
+  .status { font-size: 13px; color: var(--muted); }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { background: var(--ok-bg); font-weight: 600; font-size: 13px; }
+  td.n { color: var(--muted); width: 1%; }
+  td.disp { font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  tr.bad td { background: var(--warn-bg); color: var(--warn); white-space: normal; }
+  .empty { color: var(--muted); padding: 22px 12px; text-align: center; }
+  .toast { font-size: 13px; color: var(--accent); min-height: 1.3em; }
 </style>
-
 </head>
 <body>
+<main>
+  <h1>Retain Order Converter</h1>
+  <p class="sub">Paste any number of rows in the original order. Each row is rearranged to the retain order and the disposal date is calculated from the expiration date.</p>
 
-<h2>Retain Converter, paste in Placard order for proper conversion</h2>
+  <section class="panel">
+    <h2>Original order</h2>
+    <p class="hint">Lot#, Machine, Expiration in Months, Expiration Date, Controlled Copy, Product Name, WIP, SAP, Color, Amount of placards, Manufacturing Date. Paste straight from Excel, or upload a CSV. A header row is optional.</p>
+    <textarea id="input" spellcheck="false" placeholder="MA1007261E&#9;MFT1&#9;Exp: 24mo&#9;10/7/2028&#9;Yes&#9;BPPFV9BFD&#9;43780009247&#9;700002008&#9;Purple&#9;5&#9;10/7/2026"></textarea>
+    <div class="bar">
+      <label class="filebtn">Upload CSV<input type="file" id="file" accept=".csv,.tsv,.txt"></label>
+      <button id="sample" type="button">Load example</button>
+      <button id="clear" type="button">Clear</button>
+      <span class="spacer"></span>
+      <label class="opt">Disposal after <input type="number" id="months" value="6" min="0" max="120"> months</label>
+    </div>
+  </section>
 
-<textarea id="input" placeholder="Paste copied data here..."></textarea>
-
-<br>
-
-<button onclick="convert()">Convert to Retain</button>
-<button onclick="copyOutput()">Copy Output</button>
-<button onclick="clearAll()">Clear</button>
-
-<div id="status"></div>
-
-<table id="outputTable">
-<thead>
-<tr>
-<th>Product ID</th>
-<th>SAP</th>
-<th>Lot#</th>
-<th>Expiration Date</th>
-<th>Retain Date</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+  <section class="panel">
+    <h2>Retain order</h2>
+    <p class="hint">Product Name, SAP, Lot#, Expiration Date, Disposal Date.</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th></th><th>Product Name</th><th>SAP</th><th>Lot#</th><th>Expiration Date</th><th>Disposal Date</th></tr>
+        </thead>
+        <tbody id="out"><tr><td colspan="6" class="empty">Paste rows above to see the converted output.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="bar">
+      <button id="copy" class="primary" type="button" disabled>Copy for Excel</button>
+      <button id="download" type="button" disabled>Download CSV</button>
+      <label class="opt"><input type="checkbox" id="hdr" checked> Include header row</label>
+      <span class="spacer"></span>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </section>
+</main>
 
 <script>
+(function () {
+  var COLS = ["lot", "machine", "expmonths", "expdate", "controlled", "product", "wip", "sap", "color", "placards", "mfgdate"];
+  var HEADER_MAP = {
+    "lot#": "lot", "lot": "lot", "lot #": "lot", "lot number": "lot",
+    "machine": "machine",
+    "expiration in months": "expmonths",
+    "expiration date": "expdate",
+    "controlled copy": "controlled",
+    "product name": "product", "product": "product",
+    "wip": "wip",
+    "sap": "sap",
+    "color": "color",
+    "amount of placards": "placards",
+    "manufactureing date": "mfgdate", "manufacturing date": "mfgdate"
+  };
 
-const COL_PRODUCT = 0;
-const COL_SAP = 2;
-const COL_LOT = 3;
-const COL_EXP = 4;
+  var $ = function (id) { return document.getElementById(id); };
+  var input = $("input"), out = $("out"), monthsEl = $("months");
+  var results = [];
 
-let outputText = "";
-
-function addSixMonths(dateString) {
-
-    const parts = dateString.split("-");
-
-    if (parts.length !== 3) return "";
-
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const day = parseInt(parts[2], 10);
-
-    const targetMonth = month + 6;
-
-    const targetYear = year + Math.floor((targetMonth - 1) / 12);
-    const finalMonth = ((targetMonth - 1) % 12) + 1;
-
-    // Find the last day of the destination month
-    const lastDay = new Date(targetYear, finalMonth, 0).getDate();
-
-    // Clamp the original day to the last day of the destination month
-    const finalDay = Math.min(day, lastDay);
-
-    return `${targetYear}-${String(finalMonth).padStart(2,"0")}-${String(finalDay).padStart(2,"0")}`;
-}
-
-function convert() {
-
-    const input = document.getElementById("input").value.trim();
-    const tbody = document.querySelector("#outputTable tbody");
-
-    tbody.innerHTML = "";
-    outputText = "";
-
-    if (input === "") {
-        document.getElementById("status").textContent = "Nothing to convert.";
-        return;
+  /* ---------- parsing ---------- */
+  function parseLine(line, delim) {
+    var cells = [], cur = "", q = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (q) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; } else q = false;
+        } else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === delim) { cells.push(cur); cur = ""; }
+      else cur += ch;
     }
+    cells.push(cur);
+    return cells.map(function (c) { return c.trim(); });
+  }
 
-    const rows = input.split(/\r?\n/);
+  function parseDate(s) {
+    s = (s || "").trim();
+    var m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})/);
+    var y, mo, d;
+    if (m) {
+      mo = +m[1]; d = +m[2]; y = +m[3];
+      if (y < 100) y += 2000;
+    } else {
+      m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return null;
+      y = +m[1]; mo = +m[2]; d = +m[3];
+    }
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt;
+  }
 
-    let converted = 0;
-    let skipped = 0;
+  function addMonths(dt, n) {
+    var y = dt.getFullYear(), m = dt.getMonth() + n, d = dt.getDate();
+    var target = new Date(y, m, 1);
+    var last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    return new Date(target.getFullYear(), target.getMonth(), Math.min(d, last));
+  }
 
-    rows.forEach(row => {
+  function fmt(dt) {
+    return (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear();
+  }
 
-        if (row.trim() === "") return;
+  function convert(text, months) {
+    var lines = text.split(/\r\n|\n|\r/).filter(function (l) { return l.replace(/[,\t\s]/g, "") !== ""; });
+    var rows = [], map = null;
 
-        const cols = row.split("\t");
+    lines.forEach(function (line) {
+      var delim = line.indexOf("\t") >= 0 ? "\t" : ",";
+      var cells = parseLine(line, delim);
 
-        // Expecting 9 columns
-        if (cols.length < 9) {
-            skipped++;
-            return;
-        }
+      // header row: build a column map by name
+      var lower = cells.map(function (c) { return c.toLowerCase(); });
+      if (lower.indexOf("lot#") >= 0 || lower.indexOf("expiration date") >= 0) {
+        map = {};
+        lower.forEach(function (c, i) { if (HEADER_MAP[c] && map[HEADER_MAP[c]] === undefined) map[HEADER_MAP[c]] = i; });
+        return;
+      }
 
-        const product = cols[COL_PRODUCT];
-        const sap = cols[COL_SAP];
-        const lot = cols[COL_LOT];
-        const exp = cols[COL_EXP];
-        const retain = addSixMonths(exp);
+      var get;
+      if (map) {
+        get = function (k) { return map[k] === undefined ? "" : (cells[map[k]] || ""); };
+      } else {
+        // positional; skip a leading empty "Original Order" cell if present
+        var off = (cells.length >= 12 && cells[0] === "") ? 1 : 0;
+        get = function (k) { return cells[off + COLS.indexOf(k)] || ""; };
+      }
 
-        const tr = document.createElement("tr");
-
-        [product, sap, lot, exp, retain].forEach(value => {
-            const td = document.createElement("td");
-            td.textContent = value;
-            tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-
-        outputText +=
-`${product}\t${sap}\t${lot}\t${exp}\t${retain}\n`;
-
-        converted++;
-
+      var rec = { product: get("product"), sap: get("sap"), lot: get("lot"), expRaw: get("expdate"), raw: line };
+      var exp = parseDate(rec.expRaw);
+      var problems = [];
+      if (!rec.product) problems.push("missing Product Name");
+      if (!rec.sap) problems.push("missing SAP");
+      if (!rec.lot) problems.push("missing Lot#");
+      if (!exp) problems.push(rec.expRaw ? "can't read Expiration Date \"" + rec.expRaw + "\"" : "missing Expiration Date");
+      rec.problems = problems;
+      if (exp) { rec.expiration = fmt(exp); rec.disposal = fmt(addMonths(exp, months)); }
+      rows.push(rec);
     });
+    return rows;
+  }
 
-    document.getElementById("status").textContent =
-        `Converted ${converted} row(s)` +
-        (skipped ? ` | Skipped ${skipped} malformed row(s)` : "");
+  /* ---------- rendering ---------- */
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; });
+  }
 
-}
+  function render() {
+    var months = parseInt(monthsEl.value, 10);
+    if (isNaN(months) || months < 0) months = 6;
+    results = convert(input.value, months);
+    var good = results.filter(function (r) { return !r.problems.length; });
 
-function copyOutput() {
-
-    if (outputText === "") {
-        alert("Nothing to copy.");
-        return;
+    if (!results.length) {
+      out.innerHTML = '<tr><td colspan="6" class="empty">Paste rows above to see the converted output.</td></tr>';
+    } else {
+      out.innerHTML = results.map(function (r, i) {
+        if (r.problems.length) {
+          return '<tr class="bad"><td class="n">' + (i + 1) + '</td><td colspan="5">Row ' + (i + 1) + ": " + esc(r.problems.join(", ")) + "</td></tr>";
+        }
+        return "<tr><td class=\"n\">" + (i + 1) + "</td><td>" + esc(r.product) + "</td><td>" + esc(r.sap) + "</td><td>" + esc(r.lot) +
+               "</td><td>" + r.expiration + "</td><td class=\"disp\">" + r.disposal + "</td></tr>";
+      }).join("");
     }
+    var bad = results.length - good.length;
+    $("status").textContent = results.length
+      ? good.length + " converted" + (bad ? ", " + bad + " need attention" : "")
+      : "";
+    $("copy").disabled = $("download").disabled = !good.length;
+  }
 
-    navigator.clipboard.writeText(outputText)
-        .then(() => alert("Output copied to clipboard."))
-        .catch(() => alert("Unable to copy output."));
+  function outputRows() {
+    var rows = [];
+    if ($("hdr").checked) rows.push(["Product Name", "SAP", "Lot#", "Expiration Date", "Disposal Date"]);
+    results.forEach(function (r) {
+      if (!r.problems.length) rows.push([r.product, r.sap, r.lot, r.expiration, r.disposal]);
+    });
+    return rows;
+  }
 
-}
+  function toast(msg) {
+    $("toast").textContent = msg;
+    clearTimeout(toast.t);
+    toast.t = setTimeout(function () { $("toast").textContent = ""; }, 2500);
+  }
 
-function clearAll() {
+  /* ---------- actions ---------- */
+  $("copy").addEventListener("click", function () {
+    var tsv = outputRows().map(function (r) { return r.join("\t"); }).join("\n");
+    function done() { toast("Copied. Paste into Excel."); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(done, fallback);
+    } else fallback();
+    function fallback() {
+      var t = document.createElement("textarea");
+      t.value = tsv; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed. Use Download CSV instead."); }
+      document.body.removeChild(t);
+    }
+  });
 
-    document.getElementById("input").value = "";
-    document.querySelector("#outputTable tbody").innerHTML = "";
-    document.getElementById("status").textContent = "";
-    outputText = "";
+  $("download").addEventListener("click", function () {
+    var csv = outputRows().map(function (r) {
+      return r.map(function (c) { return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(",");
+    }).join("\r\n");
+    var blob = new Blob([csv], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "retain-order.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast("Downloaded retain-order.csv");
+  });
 
-}
+  $("file").addEventListener("change", function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { input.value = rd.result; render(); };
+    rd.readAsText(f);
+    e.target.value = "";
+  });
 
+  $("sample").addEventListener("click", function () {
+    input.value = "MA1007261E\tMFT1\tExp: 24mo\t10/7/2028\tYes\tBPPFV9BFD\t43780009247\t700002008\tPurple\t5\t10/7/2026";
+    render();
+  });
+  $("clear").addEventListener("click", function () { input.value = ""; render(); input.focus(); });
+
+  input.addEventListener("input", render);
+  monthsEl.addEventListener("input", render);
+  $("hdr").addEventListener("change", function () {});
+  render();
+})();
 </script>
-
 </body>
 </html>
